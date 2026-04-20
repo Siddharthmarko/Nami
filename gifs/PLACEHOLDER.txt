@@ -1,0 +1,5 @@
+Add your easter egg GIF here.
+
+Name it: surprise.gif
+
+It will appear when the easter egg is triggered (click the divider 5 times).
