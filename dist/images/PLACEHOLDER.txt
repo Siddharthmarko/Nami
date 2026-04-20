@@ -1,0 +1,11 @@
+Add your photos here.
+
+Name them:
+  photo01.jpg
+  photo02.jpg
+  photo03.jpg
+  ...
+
+Then update src/data/galleryData.js to match.
+
+See README.md for full instructions.

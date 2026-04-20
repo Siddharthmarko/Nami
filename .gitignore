@@ -1,0 +1,65 @@
+# ----------------------------
+# OS files
+# ----------------------------
+.DS_Store
+Thumbs.db
+
+# ----------------------------
+# Node (if you add later)
+# ----------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# ----------------------------
+# Environment files
+# ----------------------------
+.env
+.env.local
+.env.*.local
+
+# ----------------------------
+# Build / dist
+# ----------------------------
+.out/
+./.zip
+.zip
+*zip
+
+# ----------------------------
+# Logs
+# ----------------------------
+logs
+*.log
+
+# ----------------------------
+# Editor / IDE
+# ----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ----------------------------
+# Cache
+# ----------------------------
+.cache/
+.tmp/
+
+# ----------------------------
+# Mac system
+# ----------------------------
+.AppleDouble
+.LSOverride
+
+# ----------------------------
+# Images generated (optional)
+# ----------------------------
+# Uncomment if needed
+# *.png
+# *.jpg
+# *.jpeg
+# *.gif
