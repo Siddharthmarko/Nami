@@ -1,130 +1,191 @@
-import { useState, useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence, useInView } from 'framer-motion'
+import { useLocalState } from '../hooks/useLocalState'
+import { useChat } from '../hooks/useChat'
+import ChatBubble from './ChatBubble'
+import NameModal from './NameModal'
 
-const GDOC_URL =
-  'https://docs.google.com/document/d/e/2PACX-1vTazPxWDqr_3-jnXcmsckkA76wF3JlxNQFCejzLDHh9fPpwo_KaN9Jpc0RJcdE3CwkstHR6T6u6WA24/pub?embedded=true'
+const OWNER_NAME = 'goutam'
 
 export default function Messages() {
-  const [loaded, setLoaded] = useState(false)
-  const ref = useRef(null)
-  const inView = useInView(ref, { once: true, margin: '0px 0px -80px 0px' })
+  const sectionRef = useRef(null)
+  const inView = useInView(sectionRef, { once: true, margin: '0px 0px -80px 0px' })
+
+  const [myName, setMyName] = useLocalState('chat_name', '')
+  const [showModal, setShowModal] = useState(false)
+
+  const { messages, loading, error, sending, sendMessage } = useChat()
+
+  const [input, setInput] = useState('')
+  const inputRef = useRef(null)
+  const messagesRef = useRef(null)
+
+  // Show name modal
+  useEffect(() => {
+    if (!myName) setShowModal(true)
+  }, [myName])
+
+  // Stable scroll (NO JUMP)
+  useEffect(() => {
+    const el = messagesRef.current
+    if (!el) return
+
+    const isNearBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 120
+
+    if (isNearBottom) {
+      el.scrollTop = el.scrollHeight
+    }
+  }, [messages])
+
+  // Focus input
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [myName])
+
+  const handleNameConfirm = (name) => {
+    setMyName(name)
+    setShowModal(false)
+  }
+
+  const handleSend = useCallback(async () => {
+    const text = input.trim()
+    if (!text || !myName || sending) return
+
+    setInput('')
+
+    // Optimistic feel (no wait)
+    sendMessage(myName, text)
+  }, [input, myName, sending, sendMessage])
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
+  const getBubbleSide = (msgName) => {
+    const me = myName.toLowerCase()
+    const sender = msgName.toLowerCase()
+
+    if (me === OWNER_NAME) {
+      return sender === OWNER_NAME ? 'left' : 'right'
+    } else {
+      return sender === me ? 'right' : 'left'
+    }
+  }
 
   return (
-    <section id="notes" className="py-20 px-4 md:px-8" ref={ref}>
+    <section id="notes" className="py-20 px-4 md:px-8" ref={sectionRef}>
       <div className="max-w-2xl mx-auto">
 
         {/* Header */}
         <motion.div
-          className="mb-10"
+          className="mb-8"
           initial={{ opacity: 0, y: 24 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.8 }}
         >
-          <p className="font-hand text-amber text-sm tracking-widest mb-2" style={{ letterSpacing: '0.2em' }}>
+          <p className="text-sm tracking-widest mb-2" style={{ color: '#c9884f' }}>
             — notes
           </p>
-          <h2 className="font-serif text-cream text-4xl md:text-5xl font-light" style={{ fontStyle: 'italic' }}>
-            thoughts &amp; things
+          <h2 style={{ color: '#e8ddd0' }} className="text-4xl italic">
+            thoughts & things
           </h2>
-          <p className="font-sans text-cream-dim text-sm mt-2 leading-relaxed max-w-xs">
-            a shared space. write things here if you want to.
-          </p>
         </motion.div>
 
-        {/* Paper card */}
+        {/* Chat Container */}
         <motion.div
-          className="relative"
+          className="relative rounded-3xl overflow-hidden"
+          style={{
+            height: 520,
+            background: '#0b141a',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.9, delay: 0.15 }}
         >
-          {/* Ruled lines decoration */}
-          <div
-            className="absolute top-0 left-0 right-0 bottom-0 rounded-2xl pointer-events-none overflow-hidden"
-            style={{ zIndex: 0 }}
-          >
-            {Array.from({ length: 12 }, (_, i) => (
-              <div
-                key={i}
-                className="absolute left-12 right-6"
-                style={{
-                  top: `${60 + i * 28}px`,
-                  height: '1px',
-                  background: 'rgba(232,221,208,0.04)',
-                }}
-              />
-            ))}
-            {/* Margin line */}
-            <div
-              className="absolute top-0 bottom-0 w-px"
-              style={{ left: '44px', background: 'rgba(201,136,79,0.08)' }}
-            />
-          </div>
 
-          {/* Card */}
-          <div
-            className="paper-card relative z-10 overflow-hidden"
-            style={{ minHeight: 480 }}
-          >
-            {/* Top bar */}
-            <div
-              className="flex items-center gap-3 px-5 py-3"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
-            >
-              <div className="flex gap-2">
-                {['rgba(201,136,79,0.5)', 'rgba(122,140,126,0.5)', 'rgba(232,221,208,0.2)'].map((c, i) => (
-                  <div key={i} className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
-                ))}
-              </div>
-              <span className="font-hand text-cream-dim text-xs ml-2">notes.doc</span>
+          {/* Top Bar */}
+          <div className="flex items-center px-4 py-3 bg-[#1f2c33]">
+            <div className="flex-1">
+              <p style={{ color: '#e9edef' }}>us, only</p>
+              <p style={{ color: 'rgba(255,255,255,0.4)' }}>
+                {loading ? 'loading…' : error ? 'connection lost' : 'online'}
+              </p>
             </div>
 
-            {/* Loading state */}
-            {!loaded && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                <div className="w-6 h-6 border-2 border-muted border-t-amber rounded-full animate-spin" />
-                <span className="font-hand text-cream-dim text-sm">opening notes...</span>
-              </div>
+            {myName && (
+              <button onClick={() => setShowModal(true)}>
+                {myName}
+              </button>
             )}
-
-            {/* Google Docs iframe */}
-            <iframe
-              src={GDOC_URL}
-              width="100%"
-              height="480"
-              frameBorder="0"
-              scrolling="yes"
-              onLoad={() => setLoaded(true)}
-              style={{
-                opacity: loaded ? 1 : 0,
-                transition: 'opacity 0.5s ease',
-                display: 'block',
-                background: 'transparent',
-              }}
-              title="notes"
-            />
           </div>
 
-          {/* Decorative corner fold */}
+          {/* Messages */}
           <div
-            className="absolute top-0 right-0 w-8 h-8 pointer-events-none"
-            style={{
-              background: 'linear-gradient(225deg, rgba(201,136,79,0.12) 50%, transparent 50%)',
-              borderRadius: '0 16px 0 0',
-              zIndex: 20,
-            }}
-          />
-        </motion.div>
+            ref={messagesRef}
+            className="flex flex-col overflow-y-auto p-4"
+            style={{ height: 'calc(100% - 110px)' }}
+          >
+            {loading && messages.length === 0 && (
+              <p>Loading...</p>
+            )}
 
-        <motion.p
-          className="font-hand text-center mt-5 text-sm"
-          style={{ color: 'rgba(201,136,79,0.35)' }}
-          initial={{ opacity: 0 }}
-          animate={inView ? { opacity: 1 } : {}}
-          transition={{ delay: 0.6 }}
-        >
-          only you can see this ✦
-        </motion.p>
+            {error && (
+              <p style={{ color: 'red' }}>{error}</p>
+            )}
+
+            {!loading && messages.length === 0 && (
+              <p>No messages yet</p>
+            )}
+
+            <AnimatePresence>
+              {messages.map((msg, i) => {
+                const side = getBubbleSide(msg.name)
+                const isOwn = side === 'right'
+
+                return (
+                  <ChatBubble
+                    key={msg.id || i}
+                    name={msg.name}
+                    time={msg.time}
+                    text={msg.text}
+                    isOwn={isOwn}
+                  />
+                )
+              })}
+            </AnimatePresence>
+          </div>
+
+          {/* Input */}
+          <div className="absolute bottom-0 w-full flex p-2 bg-[#1f2c33]">
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type message..."
+              className="flex-1 px-4 py-2 rounded-full bg-[#2a3942] text-white"
+            />
+
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="ml-2 px-4 bg-green-700 rounded-full"
+            >
+              Send
+            </button>
+          </div>
+
+          {/* Name Modal */}
+          <AnimatePresence>
+            {showModal && (
+              <NameModal onConfirm={handleNameConfirm} />
+            )}
+          </AnimatePresence>
+
+        </motion.div>
       </div>
     </section>
   )
